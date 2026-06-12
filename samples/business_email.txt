@@ -1,0 +1,40 @@
+Subject: Q3 2026 Strategic Review and Roadmap Update — All Hands Summary
+
+Dear Team,
+
+I am writing to share a comprehensive summary of our Q3 2026 strategic review session held last Tuesday, along with the key decisions and action items that will guide our work through the remainder of the year. This communication is addressed to all departments and serves as the official record of outcomes from the session.
+
+Financial Performance Review
+
+Our Q3 revenue reached $47.2 million, representing a 23 percent increase year-over-year and a 4 percent improvement over Q2. This growth was driven primarily by strong performance in the enterprise segment, which grew 31 percent year-over-year following the successful launch of our premium tier product suite in late June. Customer acquisition costs declined by 12 percent quarter-over-quarter as our inbound marketing programme matured and organic search traffic increased by 67 percent.
+
+However, operating margins contracted by 2.3 percentage points to 18.7 percent, below our target of 21 percent. The primary drivers were increased headcount costs from our engineering expansion in February, higher cloud infrastructure spend resulting from product launches, and elevated professional services costs associated with our largest enterprise implementation to date. The Finance team will present a detailed cost optimisation analysis at the upcoming Leadership Council meeting on October 14th.
+
+Product and Engineering Updates
+
+The engineering organisation shipped 47 features in Q3, compared to 31 in Q2, representing a significant acceleration in delivery velocity following our adoption of the new sprint planning framework introduced by Director of Engineering Marcus Webb in May. The mobile application reached 2.1 million monthly active users, surpassing our original annual target of 1.8 million six months ahead of schedule.
+
+Our Q4 roadmap priorities include the completion of the data analytics dashboard, the launch of the API developer platform, improvements to our notification infrastructure to reduce latency, and the beginning of work on our multi-language localisation initiative targeting Spanish, French, and Portuguese markets. Engineering capacity planning for Q1 2027 will begin in November, and department heads should submit their headcount requirements by October 28th.
+
+Customer Success and Retention
+
+Net revenue retention reached 118 percent in Q3, our highest recorded figure, indicating strong expansion revenue from existing customers. Customer satisfaction scores averaged 4.6 out of 5 across all product lines. The Customer Success team successfully renewed 94 percent of contracts due in Q3, with an average expansion of 15 percent in contract value.
+
+The onboarding process redesign launched in July reduced time-to-value for new customers from an average of 47 days to 23 days. This improvement is directly attributed to the new guided setup wizard developed by Product Manager Sadia Khan and her team, in collaboration with the Customer Success organisation.
+
+People and Culture
+
+Total headcount reached 312 employees at the end of Q3, up from 267 at the start of the year. We welcomed 18 new employees in Q3 alone, with the majority joining the Engineering and Customer Success departments. Employee satisfaction scores from our quarterly pulse survey averaged 7.8 out of 10, with work-life balance and career development opportunities receiving the highest ratings.
+
+We are pleased to announce the promotion of three team members to Senior Director level, recognising their outstanding contributions and leadership growth over the past year. Formal announcements will be shared by People Operations next week.
+
+Looking Ahead
+
+Our Q4 targets are revenue of $52 million, achieving operating margin of 20 percent, and launching the developer platform to public beta. These targets reflect our continued investment in growth while maintaining a clear path to profitability. I am confident that with the talent, dedication, and momentum we have built, we are well positioned to close the year strongly.
+
+Please do not hesitate to reach out with questions or feedback. The full strategic review presentation will be uploaded to the company intranet by end of day Friday.
+
+With appreciation for your continued commitment and hard work,
+
+Alexandra Chen
+Chief Executive Officer

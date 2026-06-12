@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-wrapper">
+
+  <!-- ─── LEFT PANEL: Input ─────────────────────────────────────── -->
+  <section class="panel panel-input" aria-label="Input panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Document Input</h2>
+      <p class="panel-subtitle">Paste text, upload a file, then configure options below.</p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="tab-group" role="tablist" aria-label="Input method">
+      <button class="tab-btn tab-btn--active" role="tab" data-tab="text" aria-selected="true">
+        Paste Text
+      </button>
+      <button class="tab-btn" role="tab" data-tab="file" aria-selected="false">
+        Upload File
+      </button>
+    </div>
+
+    <!-- Text tab -->
+    <div class="tab-content" id="tab-text">
+      <div class="field-group">
+        <label class="field-label" for="textInput">Document text</label>
+        <textarea
+          id="textInput"
+          class="field-textarea"
+          placeholder="Paste your document here (minimum 100 characters)…"
+          rows="12"
+          maxlength="50000"
+          aria-describedby="charCount textError"
+        ></textarea>
+        <div class="field-footer">
+          <span class="field-error" id="textError" role="alert"></span>
+          <span class="char-count" id="charCount">0 / 50,000</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- File tab -->
+    <div class="tab-content tab-content--hidden" id="tab-file">
+      <div class="upload-zone" id="uploadZone" tabindex="0" role="button" aria-label="Upload file area">
+        <div class="upload-icon">&#128196;</div>
+        <p class="upload-label">Drag &amp; drop a .txt or .pdf file</p>
+        <p class="upload-hint">or click to browse · max 5 MB</p>
+        <input type="file" id="fileInput" accept=".txt,.pdf" class="upload-input" aria-label="Choose file" />
+      </div>
+      <div class="upload-status" id="uploadStatus"></div>
+    </div>
+
+    <!-- Options -->
+    <div class="options-section">
+      <div class="options-grid">
+        <div class="field-group">
+          <label class="field-label" for="methodSelect">Scoring method</label>
+          <select id="methodSelect" class="field-select" aria-label="Scoring method">
+            <option value="combined">Combined (Recommended)</option>
+            <option value="frequency">Frequency-based</option>
+            <option value="tfidf">TF-IDF</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="ratioSlider">
+            Summary length &mdash; <span id="ratioValue">30%</span>
+          </label>
+          <input
+            type="range"
+            id="ratioSlider"
+            class="field-range"
+            min="10" max="90" value="30" step="5"
+            aria-valuemin="10" aria-valuemax="90" aria-valuenow="30"
+            aria-label="Summary length percentage"
+          />
+          <div class="range-labels">
+            <span>Shorter</span>
+            <span>Longer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="summarizeBtn" type="button">
+      <span class="btn-text">Summarize</span>
+      <span class="btn-spinner" hidden aria-hidden="true"></span>
+    </button>
+  </section>
+
+  <!-- ─── RIGHT PANEL: Output ───────────────────────────────────── -->
+  <section class="panel panel-output" aria-label="Output panel" aria-live="polite">
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">&#9670;</div>
+      <p class="empty-title">Your summary will appear here</p>
+      <p class="empty-hint">Input a document on the left and click <strong>Summarize</strong>.</p>
+    </div>
+
+    <!-- Results (hidden until we have data) -->
+    <div class="results" id="results" hidden>
+
+      <!-- Stats bar -->
+      <div class="stats-bar">
+        <div class="stat-chip">
+          <span class="stat-label">Original</span>
+          <span class="stat-value" id="statOriginal">—</span>
+        </div>
+        <div class="stat-chip">
+          <span class="stat-label">Summary</span>
+          <span class="stat-value" id="statSummary">—</span>
+        </div>
+        <div class="stat-chip stat-chip--accent">
+          <span class="stat-label">Reduced by</span>
+          <span class="stat-value" id="statReduced">—</span>
+        </div>
+      </div>
+
+      <!-- Summary box -->
+      <div class="summary-box">
+        <div class="summary-box-header">
+          <h3 class="summary-box-title">Summary</h3>
+          <button class="btn-copy" id="copyBtn" type="button" title="Copy summary">&#128203; Copy</button>
+        </div>
+        <p class="summary-text" id="summaryText"></p>
+      </div>
+
+      <!-- Analytics tabs -->
+      <div class="analytics-section">
+        <div class="tab-group tab-group--sm" role="tablist" aria-label="Analytics tabs">
+          <button class="tab-btn tab-btn--active" role="tab" data-analytics-tab="keywords" aria-selected="true">Keywords</button>
+          <button class="tab-btn" role="tab" data-analytics-tab="wordfreq" aria-selected="false">Word Freq</button>
+          <button class="tab-btn" role="tab" data-analytics-tab="scores" aria-selected="false">Sentence Scores</button>
+        </div>
+
+        <div class="analytics-content" id="analytics-keywords">
+          <div class="keyword-cloud" id="keywordCloud"></div>
+        </div>
+
+        <div class="analytics-content analytics-content--hidden" id="analytics-wordfreq">
+          <div class="chart-container">
+            <canvas id="freqChart" aria-label="Word frequency chart"></canvas>
+          </div>
+        </div>
+
+        <div class="analytics-content analytics-content--hidden" id="analytics-scores">
+          <div class="score-list" id="scoreList"></div>
+        </div>
+      </div>
+
+      <!-- Export buttons -->
+      <div class="export-row">
+        <button class="btn-secondary" id="exportTxt" type="button">&#8659; Export .txt</button>
+        <button class="btn-secondary" id="exportPdf" type="button">&#8659; Export .pdf</button>
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+{% endblock %}

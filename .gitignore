@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Flask
+instance/
+*.sqlite
+
+# Runtime directories (generated content, not source)
+uploads/
+exports/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# spaCy models (downloaded at runtime)
+en_core_web_sm*
+
+# Weights / model cache
+*.bin
+*.safetensors
+transformers_cache/
+
+# Logs
+*.log
+logs/
