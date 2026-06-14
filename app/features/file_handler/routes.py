@@ -1,17 +1,21 @@
+import io
+import logging
 import os
 from flask import Blueprint, request, jsonify, send_file, current_app
-from werkzeug.utils import secure_filename
 
+from app.extensions import limiter
 from app.features.file_handler.validators import validate_upload
 from app.features.file_handler.reader import read_file
 from app.features.file_handler.writer import export_summary
 
+logger = logging.getLogger(__name__)
 file_bp = Blueprint("file", __name__)
 
 _MAX_BATCH_FILES = 10
 
 
 @file_bp.route("/api/upload", methods=["POST"])
+@limiter.limit("30 per minute")
 def upload():
     if "file" not in request.files:
         return jsonify({"success": False, "error": "No file field in request."}), 400
@@ -30,6 +34,7 @@ def upload():
     try:
         text = read_file(filepath)
     except Exception as exc:
+        logger.warning("File read failed for %s: %s", safe_name, exc)
         return jsonify({"success": False, "error": f"Could not read file: {exc}"}), 422
     finally:
         if os.path.exists(filepath):
@@ -42,6 +47,7 @@ def upload():
 
 
 @file_bp.route("/api/upload-multiple", methods=["POST"])
+@limiter.limit("10 per minute")
 def upload_multiple():
     files = request.files.getlist("files")
 
@@ -76,6 +82,7 @@ def upload_multiple():
         try:
             text = read_file(filepath)
         except Exception as exc:
+            logger.warning("Batch file read failed for %s: %s", file.filename, exc)
             errors.append({"name": file.filename, "error": f"Could not read file: {exc}"})
             continue
         finally:
@@ -104,6 +111,7 @@ def upload_multiple():
 
 
 @file_bp.route("/api/export", methods=["POST"])
+@limiter.limit("30 per minute")
 def export():
     data = request.get_json(silent=True) or {}
     summary = data.get("summary", "").strip()
@@ -115,14 +123,19 @@ def export():
     if fmt not in ("txt", "pdf"):
         return jsonify({"success": False, "error": "Format must be 'txt' or 'pdf'."}), 400
 
-    export_folder = current_app.config["EXPORT_FOLDER"]
     try:
-        output_path = export_summary(summary, export_folder, fmt)
+        file_bytes, filename = export_summary(summary, fmt)
     except Exception as exc:
+        logger.error("Export failed: %s", exc)
         return jsonify({"success": False, "error": f"Export failed: {exc}"}), 500
 
     mime = "application/pdf" if fmt == "pdf" else "text/plain"
-    return send_file(output_path, as_attachment=True, mimetype=mime)
+    return send_file(
+        io.BytesIO(file_bytes),
+        as_attachment=True,
+        download_name=filename,
+        mimetype=mime,
+    )
 
 
 @file_bp.route("/api/health")

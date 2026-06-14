@@ -1,197 +1,294 @@
-{% extends "base.html" %}
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TEYZIX — Document Summarizer</title>
+  <meta name="description" content="Extract key insights from long documents instantly." />
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
 
-{% block content %}
-<div class="page-wrapper">
-
-  <!-- ─── LEFT PANEL: Input ─────────────────────────────────────── -->
-  <section class="panel panel-input" aria-label="Input panel">
-    <div class="panel-header">
-      <h2 class="panel-title">Document Input</h2>
-      <p class="panel-subtitle">Paste text, upload a file, then configure options below.</p>
-    </div>
-
-    <!-- Tab switcher -->
-    <div class="tab-group" role="tablist" aria-label="Input method">
-      <button class="tab-btn tab-btn--active" role="tab" data-tab="text" aria-selected="true">
-        Paste Text
-      </button>
-      <button class="tab-btn" role="tab" data-tab="file" aria-selected="false">
-        Upload File
-      </button>
-      <button class="tab-btn" role="tab" data-tab="multidoc" aria-selected="false">
-        Multi-Doc
-      </button>
-    </div>
-
-    <!-- Text tab -->
-    <div class="tab-content" id="tab-text">
-      <div class="field-group">
-        <label class="field-label" for="textInput">Document text</label>
-        <textarea
-          id="textInput"
-          class="field-textarea"
-          placeholder="Paste your document here (minimum 100 characters)…"
-          rows="12"
-          maxlength="50000"
-          aria-describedby="charCount textError"
-        ></textarea>
-        <div class="field-footer">
-          <span class="field-error" id="textError" role="alert"></span>
-          <span class="char-count" id="charCount">0 / 50,000</span>
+  <!-- ============ HEADER ============ -->
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16" /><path d="M4 12h16" opacity=".85" /><path d="M4 18h9" opacity=".6" />
+            <path d="M17.5 15.5l1.2 2.4 2.4 1.2-2.4 1.2-1.2 2.4-1.2-2.4L13.9 19l2.4-1.2z" fill="#fff" stroke="none" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">TEYZIX</span>
+          <span class="brand-tag">Extractive summarization</span>
         </div>
       </div>
-    </div>
 
-    <!-- File tab -->
-    <div class="tab-content tab-content--hidden" id="tab-file">
-      <div class="upload-zone" id="uploadZone" tabindex="0" role="button" aria-label="Upload file area">
-        <div class="upload-icon">&#128196;</div>
-        <p class="upload-label">Drag &amp; drop a .txt or .pdf file</p>
-        <p class="upload-hint">or click to browse · max 5 MB</p>
-        <input type="file" id="fileInput" accept=".txt,.pdf" class="upload-input" aria-label="Choose file" />
-      </div>
-      <div class="upload-status" id="uploadStatus"></div>
-    </div>
-
-    <!-- Multi-Doc tab -->
-    <div class="tab-content tab-content--hidden" id="tab-multidoc">
-      <div class="upload-zone" id="multiUploadZone" tabindex="0" role="button" aria-label="Upload multiple files area">
-        <div class="upload-icon">&#128196;&#128196;</div>
-        <p class="upload-label">Drop multiple .txt or .pdf files here</p>
-        <p class="upload-hint">or click to browse · up to 10 files · 5 MB each</p>
-        <input type="file" id="multiFileInput" accept=".txt,.pdf" multiple class="upload-input" aria-label="Choose files" />
-      </div>
-      <div class="file-list" id="multiFileList"></div>
-      <div class="mode-toggle-group">
-        <span class="field-label">Summary mode</span>
-        <div class="mode-toggle" role="group" aria-label="Summary mode">
-          <button class="mode-btn mode-btn--active" data-mode="combined" type="button">Combined</button>
-          <button class="mode-btn" data-mode="individual" type="button">Individual</button>
-        </div>
-      </div>
-      <div class="upload-status" id="multiUploadStatus"></div>
-    </div>
-
-    <!-- Options -->
-    <div class="options-section">
-      <div class="options-grid">
-        <div class="field-group">
-          <label class="field-label" for="methodSelect">Scoring method</label>
-          <select id="methodSelect" class="field-select" aria-label="Scoring method">
-            <option value="combined">Combined (Recommended)</option>
-            <option value="frequency">Frequency-based</option>
-            <option value="tfidf">TF-IDF</option>
-            <option value="abstractive">Abstractive — BART ✦</option>
-          </select>
-        </div>
-
-        <div class="field-group">
-          <label class="field-label" for="ratioSlider">
-            Summary length &mdash; <span id="ratioValue">30%</span>
-          </label>
-          <input
-            type="range"
-            id="ratioSlider"
-            class="field-range"
-            min="10" max="90" value="30" step="5"
-            aria-valuemin="10" aria-valuemax="90" aria-valuenow="30"
-            aria-label="Summary length percentage"
-          />
-          <div class="range-labels">
-            <span>Shorter</span>
-            <span>Longer</span>
-          </div>
-        </div>
+      <div class="top-actions">
+        <button class="pill-link" type="button" title="All processing happens on your local server">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></svg>
+          Runs locally
+        </button>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark / light mode">
+          <span class="knob">
+            <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
+            <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+          </span>
+        </button>
       </div>
     </div>
+  </header>
 
-    <button class="btn-primary" id="summarizeBtn" type="button">
-      <span class="btn-text">Summarize</span>
-      <span class="btn-spinner" hidden aria-hidden="true"></span>
-    </button>
+  <!-- ============ HERO ============ -->
+  <section class="wrap hero">
+    <h1>Extract key insights from <span class="accent">long documents</span> instantly.</h1>
+    <p>Paste text or drop in files and TEYZIX distills them into the sentences that matter — with keyword analysis, importance scoring, and full control over method and length.</p>
   </section>
 
-  <!-- ─── RIGHT PANEL: Output ───────────────────────────────────── -->
-  <section class="panel panel-output" aria-label="Output panel" aria-live="polite">
+  <!-- ============ STUDIO ============ -->
+  <main class="wrap">
+    <section class="studio">
 
-    <!-- Empty state -->
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon">&#9670;</div>
-      <p class="empty-title">Your summary will appear here</p>
-      <p class="empty-hint">Input a document on the left and click <strong>Summarize</strong>.</p>
-    </div>
-
-    <!-- Results (hidden until we have data) -->
-    <div class="results" id="results" hidden>
-
-      <!-- Stats bar -->
-      <div class="stats-bar">
-        <div class="stat-chip">
-          <span class="stat-label">Original</span>
-          <span class="stat-value" id="statOriginal">—</span>
-        </div>
-        <div class="stat-chip">
-          <span class="stat-label">Summary</span>
-          <span class="stat-value" id="statSummary">—</span>
-        </div>
-        <div class="stat-chip stat-chip--accent">
-          <span class="stat-label">Reduced by</span>
-          <span class="stat-value" id="statReduced">—</span>
-        </div>
-        <div class="stat-chip stat-chip--lang" id="statLangChip" hidden>
-          <span class="stat-label">Language</span>
-          <span class="stat-value" id="statLang">—</span>
-        </div>
-      </div>
-
-      <!-- Doc tabs for individual batch results -->
-      <div class="doc-tabs-row" id="docTabsRow" hidden></div>
-
-      <!-- Summary box -->
-      <div class="summary-box">
-        <div class="summary-box-header">
-          <div class="summary-box-title-row">
-            <h3 class="summary-box-title">Summary</h3>
-            <span class="summary-type-badge" id="summaryTypeBadge" hidden>AI Generated</span>
-          </div>
-          <button class="btn-copy" id="copyBtn" type="button" title="Copy summary">&#128203; Copy</button>
-        </div>
-        <p class="summary-text" id="summaryText"></p>
-      </div>
-
-      <!-- Analytics tabs -->
-      <div class="analytics-section">
-        <div class="tab-group tab-group--sm" role="tablist" aria-label="Analytics tabs">
-          <button class="tab-btn tab-btn--active" role="tab" data-analytics-tab="keywords" aria-selected="true">Keywords</button>
-          <button class="tab-btn" role="tab" data-analytics-tab="wordfreq" aria-selected="false">Word Freq</button>
-          <button class="tab-btn" role="tab" data-analytics-tab="scores" aria-selected="false">Sentence Scores</button>
-        </div>
-
-        <div class="analytics-content" id="analytics-keywords">
-          <div class="keyword-cloud" id="keywordCloud"></div>
-        </div>
-
-        <div class="analytics-content analytics-content--hidden" id="analytics-wordfreq">
-          <div class="chart-container">
-            <canvas id="freqChart" aria-label="Word frequency chart"></canvas>
+      <!-- ---------- LEFT: SOURCE / INPUT ---------- -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><span class="dot"></span> Source document</div>
+          <div class="tabs" id="inputTabs" role="tablist" aria-label="Input method">
+            <button class="tab" data-tab="paste" role="tab" aria-selected="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /></svg>
+              Paste
+            </button>
+            <button class="tab" data-tab="file" role="tab" aria-selected="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+              File
+            </button>
+            <button class="tab" data-tab="multi" role="tab" aria-selected="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h9a2 2 0 0 1 2 2v9" /><rect x="3" y="8" width="13" height="13" rx="2" /></svg>
+              Multiple
+              <span class="tabcount" id="multiCount">0</span>
+            </button>
+            <span class="tab-ind"></span>
           </div>
         </div>
 
-        <div class="analytics-content analytics-content--hidden" id="analytics-scores">
-          <div class="score-list" id="scoreList"></div>
+        <div class="panel-body">
+          <!-- PASTE -->
+          <div class="method-panel active" data-panel="paste">
+            <textarea class="editor" id="editor" spellcheck="false" placeholder="Paste an article, report, transcript, or any long-form text here…"></textarea>
+            <div class="editor-foot">
+              <div class="live-stats">
+                <span><b id="liveWords">0</b> words</span>
+                <span><b id="liveChars">0</b> chars</span>
+                <span><b id="liveLang">—</b></span>
+              </div>
+              <div class="foot-links">
+                <button class="linkbtn" id="loadSample" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M5 12H2M22 12h-3M6.3 6.3 4.5 4.5M19.5 19.5l-1.8-1.8M17.7 6.3l1.8-1.8M4.5 19.5l1.8-1.8" /><circle cx="12" cy="12" r="3.2" /></svg>
+                  Load sample
+                </button>
+                <button class="linkbtn" id="clearText" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SINGLE FILE -->
+          <div class="method-panel" data-panel="file">
+            <div class="dropzone" id="singleDrop">
+              <div class="dz-ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+              </div>
+              <div class="dz-title">Drop a file or click to browse</div>
+              <div class="dz-sub">A single plain-text document</div>
+              <div class="dz-formats">.txt · .md · .csv · .json · .log · .html · .xml</div>
+            </div>
+            <input type="file" id="singleInput" class="sr-only" accept=".txt,.md,.csv,.json,.log,.rtf,.html,.htm,.xml,.tex" />
+            <div class="filelist" id="singleList"></div>
+          </div>
+
+          <!-- MULTI FILE -->
+          <div class="method-panel" data-panel="multi">
+            <div class="dropzone" id="multiDrop">
+              <div class="dz-ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h9a2 2 0 0 1 2 2v9" /><rect x="3" y="8" width="13" height="13" rx="2" /><line x1="9.5" y1="11.5" x2="9.5" y2="17.5" /><line x1="6.5" y1="14.5" x2="12.5" y2="14.5" /></svg>
+              </div>
+              <div class="dz-title">Drop multiple files or click to browse</div>
+              <div class="dz-sub">Summarized together as one corpus — ideal for TF-IDF</div>
+              <div class="dz-formats">.txt · .md · .csv · .json · .log · .html · .xml</div>
+            </div>
+            <input type="file" id="multiInput" class="sr-only" multiple accept=".txt,.md,.csv,.json,.log,.rtf,.html,.htm,.xml,.tex" />
+            <div class="filelist" id="multiList"></div>
+          </div>
+
+          <!-- CONTROLS -->
+          <div class="controls">
+            <div>
+              <div class="ctrl-label">Summarization method <span class="hint">how sentences are scored</span></div>
+              <div class="select-wrap">
+                <select class="method" id="methodSelect">
+                  <option value="frequency">Frequency</option>
+                  <option value="tfidf">TF-IDF</option>
+                  <option value="combined" selected>Combined</option>
+                  <option value="abstractive">BERT Abstractive ✦</option>
+                </select>
+                <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+              </div>
+              <div class="method-desc" id="methodDesc"></div>
+            </div>
+
+            <div>
+              <div class="ctrl-label">Summary length <span class="hint">share of sentences kept</span></div>
+              <div class="slider-row">
+                <input type="range" class="slider" id="lengthSlider" min="10" max="90" value="40" step="5" aria-label="Summary length" />
+                <span class="slider-val" id="sliderVal">40%</span>
+              </div>
+              <div class="slider-ticks"><span>10% · concise</span><span>90% · detailed</span></div>
+            </div>
+
+            <button class="btn-generate" id="generateBtn" type="button">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v3M4.5 18.5h3" /><path d="M13 4l2.4 5.6L21 12l-5.6 2.4L13 20l-2.4-5.6L5 12l5.6-2.4z" fill="currentColor" stroke="none" /></svg>
+              <span class="label">Generate summary</span>
+              <span class="gen-loading"><span class="spinner"></span>Summarizing…</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Export buttons -->
-      <div class="export-row">
-        <button class="btn-secondary" id="exportTxt" type="button">&#8659; Export .txt</button>
-        <button class="btn-secondary" id="exportPdf" type="button">&#8659; Export .pdf</button>
+      <!-- ---------- RIGHT: SUMMARY ---------- -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><span class="dot"></span> Summary</div>
+          <div class="badges" id="summaryHead" style="display:none">
+            <span class="badge lang" id="langBadge"></span>
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <!-- EMPTY STATE -->
+          <div class="empty" id="emptyState">
+            <div class="empty-art" aria-hidden="true">
+              <svg viewBox="0 0 130 130" fill="none">
+                <rect x="28" y="20" width="74" height="92" rx="10" fill="var(--surface-2)" stroke="var(--border-strong)" stroke-width="1.5" />
+                <line x1="42" y1="42" x2="88" y2="42" stroke="var(--border-strong)" stroke-width="3" stroke-linecap="round" />
+                <line x1="42" y1="56" x2="88" y2="56" stroke="var(--border)" stroke-width="3" stroke-linecap="round" />
+                <line x1="42" y1="70" x2="74" y2="70" stroke="var(--border)" stroke-width="3" stroke-linecap="round" />
+                <line x1="42" y1="84" x2="80" y2="84" stroke="var(--border)" stroke-width="3" stroke-linecap="round" />
+                <g>
+                  <circle cx="92" cy="90" r="22" fill="var(--accent-soft)" stroke="var(--accent-line)" stroke-width="1.5" />
+                  <path d="M92 80l2.8 6.4L101 89l-6.2 2.6L92 98l-2.8-6.4L83 89l6.2-2.6z" fill="var(--accent)" />
+                </g>
+              </svg>
+            </div>
+            <h3>No summary yet</h3>
+            <p>Add a document and hit <b>Generate summary</b>. Your distilled text, stats, and analytics will appear here.</p>
+          </div>
+
+          <!-- RESULT -->
+          <div class="result" id="result">
+            <div class="stat-row">
+              <div class="stat">
+                <div class="sk">Original</div>
+                <div class="sv" id="statOrig">0</div>
+                <div class="su">words</div>
+              </div>
+              <div class="stat green">
+                <div class="sk">Summary</div>
+                <div class="sv" id="statSum">0</div>
+                <div class="su" id="statReadMeta">~1 min read</div>
+              </div>
+              <div class="stat accent">
+                <div class="sk">Reduced by</div>
+                <div class="sv" id="statComp">0%</div>
+                <div class="su" id="statSentMeta">0 → 0 sentences</div>
+              </div>
+            </div>
+
+            <div class="summary-box" id="summaryText"></div>
+
+            <div class="summary-actions">
+              <button class="btn primary" id="copyBtn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
+                Copy
+              </button>
+              <button class="btn" id="exportTxt" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                Export .txt
+              </button>
+              <button class="btn" id="exportPdf" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M9 13h1.5a1.5 1.5 0 0 1 0 3H9zM9 16v0" /><path d="M9 13v3" /></svg>
+                Export .pdf
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ANALYTICS ============ -->
+    <section class="analytics">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="ana-head" style="margin:0;width:100%">
+            <h2>
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18" /><rect x="7" y="11" width="3" height="6" rx="1" /><rect x="12.5" y="7" width="3" height="10" rx="1" /><rect x="18" y="13" width="3" height="4" rx="1" /></svg>
+              Analytics
+            </h2>
+            <div class="tabs" id="anaTabs" role="tablist" aria-label="Analytics view">
+              <button class="tab" data-view="keywords" role="tab" aria-selected="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10z" /><circle cx="8" cy="8" r="1.6" /></svg>
+                Keywords
+              </button>
+              <button class="tab" data-view="frequency" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="14" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="10" y2="17" /></svg>
+                Word frequency
+              </button>
+              <button class="tab" data-view="sentences" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10" /><circle cx="20" cy="18" r="2" fill="currentColor" stroke="none" /></svg>
+                Sentence scores
+              </button>
+              <span class="tab-ind"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <!-- analytics empty -->
+          <div class="ana-empty" id="anaEmpty">Run a summary to unlock keyword, frequency, and sentence-importance analytics.</div>
+
+          <!-- analytics content -->
+          <div id="anaContent" style="display:none">
+            <div class="ana-view active" data-view="keywords">
+              <div class="cloud" id="cloud"></div>
+            </div>
+            <div class="ana-view" data-view="frequency">
+              <div class="chart" id="chart"></div>
+            </div>
+            <div class="ana-view" data-view="sentences">
+              <div class="sentlist" id="sentList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="foot">
+    <div class="wrap foot-inner">
+      <div>TEYZIX · Extractive document summarization</div>
+      <div class="dotsep">
+        <span>Frequency · TF-IDF · Combined</span>
+        <span>Powered by Flask</span>
       </div>
     </div>
+  </footer>
 
-  </section>
-</div>
+  <!-- toasts -->
+  <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
 
-<!-- Toast notification -->
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-{% endblock %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -5,7 +5,9 @@ Supports exporting to plain text (.txt) and PDF (.pdf).
 The PDF is generated with reportlab using a clean, readable layout.
 """
 
+import io
 import os
+import uuid
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -15,17 +17,16 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER
 from reportlab.lib import colors
 
 
-def export_txt(summary: str, output_path: str) -> str:
+def export_txt(summary: str) -> bytes:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     content = f"TEYZIX Document Summary\nGenerated: {timestamp}\n{'='*60}\n\n{summary}\n"
-    with open(output_path, "w", encoding="utf-8") as fh:
-        fh.write(content)
-    return output_path
+    return content.encode("utf-8")
 
 
-def export_pdf(summary: str, output_path: str) -> str:
+def export_pdf(summary: str) -> bytes:
+    buffer = io.BytesIO()
     doc = SimpleDocTemplate(
-        output_path,
+        buffer,
         pagesize=A4,
         leftMargin=2.5 * cm,
         rightMargin=2.5 * cm,
@@ -67,14 +68,14 @@ def export_pdf(summary: str, output_path: str) -> str:
     ]
 
     doc.build(story)
-    return output_path
+    return buffer.getvalue()
 
 
-def export_summary(summary: str, export_folder: str, fmt: str = "txt") -> str:
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"summary_{timestamp}.{fmt}"
-    output_path = os.path.join(export_folder, filename)
+def export_summary(summary: str, fmt: str = "txt") -> tuple[bytes, str]:
+    """Return (file_bytes, download_filename)."""
+    slug = uuid.uuid4().hex[:10]
+    filename = f"summary_{slug}.{fmt}"
 
     if fmt == "pdf":
-        return export_pdf(summary, output_path)
-    return export_txt(summary, output_path)
+        return export_pdf(summary), filename
+    return export_txt(summary), filename

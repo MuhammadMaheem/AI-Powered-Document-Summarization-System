@@ -38,6 +38,10 @@ exports/
 *.swo
 .DS_Store
 
+# Design assets and build artifacts
+design_handoff_teyzix/
+*.zip
+
 # spaCy models (downloaded at runtime)
 en_core_web_sm*
 

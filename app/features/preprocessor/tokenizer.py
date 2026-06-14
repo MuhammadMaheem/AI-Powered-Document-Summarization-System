@@ -4,9 +4,6 @@ and word tokeniser.
 """
 
 import nltk
-from app.core.nlp.model_loader import ensure_nltk_resources
-
-ensure_nltk_resources()
 
 
 def sentence_tokenize(text: str) -> list:

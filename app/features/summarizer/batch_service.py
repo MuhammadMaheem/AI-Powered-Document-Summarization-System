@@ -8,18 +8,24 @@ Handles multiple documents in one request with two modes:
 Validation mirrors SummarizeRequest limits (100 char min, 50k char max
 per document) so every document is independently validated before any
 processing starts.
+
+Note: abstractive method is excluded from batch because BART inference
+on many large documents can be prohibitively slow (minutes per request).
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import List
 
 from flask import current_app
 
 from app.features.summarizer.service import summarize
-from app.features.summarizer.schemas import SummarizeRequest
+from app.features.summarizer.schemas import SummarizeRequest, VALID_METHODS
 from app.features.summarizer.exceptions import ValidationError
 
-VALID_METHODS = ("frequency", "tfidf", "combined")
+logger = logging.getLogger(__name__)
+
+BATCH_VALID_METHODS = tuple(m for m in VALID_METHODS if m != "abstractive")
 MAX_DOCUMENTS = 10
 
 
@@ -52,8 +58,11 @@ class BatchSummarizeRequest:
                 raise ValidationError(f"{label}: text exceeds {max_len} characters.")
 
         method = (data.get("method") or "combined").lower()
-        if method not in VALID_METHODS:
-            raise ValidationError(f"method must be one of: {', '.join(VALID_METHODS)}.")
+        if method not in BATCH_VALID_METHODS:
+            raise ValidationError(
+                f"method must be one of: {', '.join(BATCH_VALID_METHODS)} "
+                f"(abstractive is not supported for batch requests)."
+            )
 
         min_ratio = current_app.config.get("MIN_SUMMARY_RATIO", 0.1)
         max_ratio = current_app.config.get("MAX_SUMMARY_RATIO", 0.9)
@@ -82,6 +91,15 @@ class BatchSummarizeRequest:
 def summarize_batch(req: BatchSummarizeRequest) -> dict:
     if req.mode == "combined":
         combined_text = "\n\n".join(req.documents)
+
+        max_combined = current_app.config.get("MAX_BATCH_COMBINED_CHARS", 150_000)
+        if len(combined_text) > max_combined:
+            raise ValidationError(
+                f"Combined text exceeds {max_combined // 1000}K characters. "
+                "Reduce document count or length, or use individual mode."
+            )
+
+        logger.info("Batch combined: %d docs, %d chars", len(req.documents), len(combined_text))
         result = summarize(
             SummarizeRequest.from_dict({
                 "text": combined_text,
@@ -96,6 +114,7 @@ def summarize_batch(req: BatchSummarizeRequest) -> dict:
         return response
 
     # individual mode
+    logger.info("Batch individual: %d docs", len(req.documents))
     results = []
     for i, doc in enumerate(req.documents):
         try:
@@ -110,6 +129,7 @@ def summarize_batch(req: BatchSummarizeRequest) -> dict:
             entry["doc_index"] = i
             entry["doc_name"] = req.names[i]
         except Exception as exc:
+            logger.warning("Batch doc %d failed: %s", i, exc)
             entry = {
                 "success": False,
                 "doc_index": i,

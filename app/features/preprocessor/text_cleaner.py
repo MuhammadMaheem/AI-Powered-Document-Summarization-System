@@ -8,9 +8,6 @@ can return sentences in their original casing.
 
 import re
 from nltk.corpus import stopwords
-from app.core.nlp.model_loader import ensure_nltk_resources
-
-ensure_nltk_resources()
 
 _URL_RE = re.compile(r"https?://\S+|www\.\S+")
 _WHITESPACE_RE = re.compile(r"\s+")

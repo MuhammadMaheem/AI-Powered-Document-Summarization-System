@@ -1,69 +1,43 @@
 # TEYZIX — AI-Powered Document Summarizer
 
-> Task ID: AI-INT-1 · TEYZIX CORE · June 2026
-
-A production-grade Flask web application that extracts key insights from long documents using classical NLP and optional deep-learning abstractive summarization. Supports four summarisation methods, multi-document processing, language detection, analytics visualisation, file upload (txt/pdf), and export (txt/pdf).
+A Flask web application that distills long documents into concise summaries using classical NLP and optional deep-learning abstractive summarization. Supports four summarization methods, multi-document batch processing, 16-language detection, analytics visualization, file upload, and export.
 
 ---
 
 ## Features
 
-- **Four summarisation methods:**
-  - **Frequency-based** — scores sentences by word occurrence count
-  - **TF-IDF** — scores sentences using term frequency–inverse document frequency
-  - **Combined** — weighted blend of both + positional bias (recommended)
-  - **Abstractive (BART)** — deep-learning model generates brand-new sentences (optional, requires `transformers` + `torch`)
-- **Language detection** — auto-detects 16 languages, applies language-specific stopwords
-- **Multi-document summarization** — upload up to 10 files, Combined or Individual mode
-- **PDF + TXT upload** — Drag-and-drop or file browser
-- **Adjustable summary length** — 10% to 90% slider
-- **Analytics panel** — Top keywords, word frequency chart (Chart.js), sentence importance scores
-- **Export** — Download summary as `.txt` or `.pdf`
-- **Dark / light mode** — Persists across sessions via localStorage
-- **Input validation** — Client-side + server-side, 100–50,000 character limits
+- **Four summarization methods**
+  - **Frequency** — scores sentences by word occurrence count
+  - **TF-IDF** — scores by term frequency–inverse document frequency
+  - **Combined** — weighted blend of both with positional bias (recommended default)
+  - **Abstractive (BART)** — `facebook/bart-large-cnn` generates new sentences; chunked for long documents
+- **Language detection** — auto-detects 16 languages; applies language-specific stopwords
+- **Batch processing** — up to 10 documents per request, Combined or Individual mode
+- **File upload** — `.txt` and `.pdf`, validated by extension and magic bytes, up to 5 MB
+- **Export** — download summary as `.txt` or `.pdf` (served from memory, no disk residue)
+- **Analytics panel** — top keywords, word frequency chart, per-sentence importance scores
+- **Rate limiting** — per-IP limits on all write endpoints via Flask-Limiter
+- **CORS** — configurable origins via environment variable
+- **Dark / light theme** — persists across sessions via localStorage
+- **Adjustable ratio** — 10%–90% summary length slider
 
 ---
 
-## Quick Start
+## Tech Stack
 
-```bash
-# 1. Clone
-git clone <your-repo-url> TEYZIX
-cd TEYZIX
-
-# 2. Create virtual environment
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
-# 3. Install dependencies and download NLP models
-make setup
-
-# 4. Copy and configure environment
-cp .env.example .env
-
-# 5. Run development server
-make run
-# → open http://127.0.0.1:5000
-```
-
-Or without Make:
-
-```bash
-pip install -r requirements.txt
-python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords'); nltk.download('averaged_perceptron_tagger')"
-python -m spacy download en_core_web_sm
-python run.py
-```
-
-### Abstractive Summarization (BART)
-
-`transformers` and `torch` are included in `requirements.txt`. The BART model (`facebook/bart-large-cnn`, ~1.6 GB) downloads automatically on first use. Requires ~4 GB RAM.
-
-```bash
-# already installed via make setup / pip install -r requirements.txt
-```
-
-Select **"Abstractive — BART ✦"** from the method dropdown. First run triggers a one-time model download — subsequent runs are instant.
+| Layer | Technology |
+|---|---|
+| Web framework | Flask 3.0 |
+| NLP | NLTK 3.8, spaCy 3.8 (`en_core_web_sm`) |
+| Scoring | scikit-learn TF-IDF |
+| Abstractive model | `facebook/bart-large-cnn` (HuggingFace Transformers) |
+| Language detection | langdetect |
+| PDF read | pdfplumber |
+| PDF export | reportlab |
+| Rate limiting | Flask-Limiter |
+| CORS | Flask-CORS |
+| Frontend | Vanilla JS, Chart.js |
+| Production server | Gunicorn |
 
 ---
 
@@ -72,91 +46,212 @@ Select **"Abstractive — BART ✦"** from the method dropdown. First run trigge
 ```
 TEYZIX/
 ├── app/
-│   ├── __init__.py              # Flask app factory
-│   ├── config.py                # Dev / Prod / Test configuration
-│   ├── features/
-│   │   ├── summarizer/          # Routes, service, schemas, exceptions, batch_service
-│   │   ├── preprocessor/        # Text cleaner, tokenizer, pipeline, language_detector
-│   │   ├── analytics/           # Frequency, keywords, sentence scoring
-│   │   └── file_handler/        # Upload validator, reader, writer, routes
+│   ├── __init__.py              # App factory — CORS, rate limiting, logging, NLP init
+│   ├── config.py                # Dev / Prod / Testing config classes
+│   ├── extensions.py            # Flask-Limiter singleton
 │   ├── core/
-│   │   ├── algorithms/          # frequency_scorer, tfidf_scorer, sentence_ranker
-│   │   │                        # abstractive_summarizer (BART — optional)
-│   │   └── nlp/                 # NLTK + spaCy model loader (singleton)
-│   ├── static/css/              # themes.css, main.css
-│   ├── static/js/               # theme.js, charts.js, main.js
-│   └── templates/               # base.html, index.html, partials/
-├── tests/                       # pytest test suite (22 tests)
-├── samples/                     # 3 sample documents for demo
-├── docs/
-│   └── PROJECT_EXPLANATION.md  # Full technical walkthrough + interview Q&A
-├── run.py                       # Development entry point
-├── wsgi.py                      # Production (Gunicorn) entry point
-├── requirements.txt
-└── Makefile
+│   │   ├── algorithms/
+│   │   │   ├── frequency_scorer.py
+│   │   │   ├── tfidf_scorer.py
+│   │   │   ├── sentence_ranker.py
+│   │   │   └── abstractive_summarizer.py  # BART with chunked long-doc support
+│   │   └── nlp/
+│   │       └── model_loader.py  # NLTK + spaCy singletons, lazy init
+│   ├── features/
+│   │   ├── analytics/           # top_words, keywords, sentence scoring
+│   │   ├── file_handler/        # upload validator (magic-byte), reader, in-memory export
+│   │   ├── preprocessor/        # pipeline, tokenizer, cleaner, language detector
+│   │   └── summarizer/          # routes, service, schemas, batch service, exceptions
+│   ├── static/
+│   │   ├── app.js
+│   │   └── styles.css
+│   └── templates/
+│       └── index.html
+├── tests/
+│   ├── test_analytics.py        # 5 tests
+│   ├── test_preprocessor.py     # 8 tests
+│   └── test_summarizer.py       # 9 tests
+├── samples/                     # Sample .txt documents for testing
+├── run.py                       # Dev entry point (debug off by default)
+├── wsgi.py                      # Production WSGI entry point (Gunicorn)
+├── Makefile
+└── requirements.txt
 ```
+
+---
+
+## Quick Start
+
+### 1. Clone and create a virtual environment
+
+```bash
+git clone <repo-url> TEYZIX
+cd TEYZIX
+python -m venv venv
+source venv/bin/activate       # Windows: venv\Scripts\activate
+```
+
+### 2. Install dependencies and NLP models
+
+```bash
+make setup
+```
+
+This runs `pip install -r requirements.txt` and downloads NLTK corpora plus the spaCy English model.
+
+### 3. Configure environment
+
+Create a `.env` file in the project root:
+
+```bash
+SECRET_KEY=your-secure-random-key
+FLASK_ENV=development
+FLASK_DEBUG=false
+```
+
+| Variable | Default | Description |
+|---|---|---|
+| `SECRET_KEY` | *(required in production)* | Flask secret key for session signing |
+| `FLASK_ENV` | `development` | `development` / `production` / `testing` |
+| `FLASK_DEBUG` | `false` | Set `true` to enable Werkzeug debugger |
+| `CORS_ORIGINS` | `*` | Allowed origins (e.g. `https://yourapp.com`) |
+| `MAX_UPLOAD_BYTES` | `5242880` | Upload size limit in bytes (default 5 MB) |
+| `MAX_BATCH_COMBINED_CHARS` | `150000` | Max characters for batch-combined mode |
+
+### 4. Run
+
+```bash
+make run
+# or
+python run.py
+```
+
+Open `http://127.0.0.1:5001`.
+
+### Production
+
+```bash
+gunicorn wsgi:app --workers 4 --bind 0.0.0.0:8000
+```
+
+Set `SECRET_KEY` via environment variable — the app raises a `RuntimeError` at startup if it is not configured in production mode.
+
+### Abstractive Summarization (BART)
+
+The `facebook/bart-large-cnn` model (~1.6 GB) downloads automatically on first use. Requires ~4 GB RAM. Select **"Abstractive — BART ✦"** in the method dropdown. Subsequent runs use the cached model.
 
 ---
 
 ## API Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`  | `/` | Main UI page |
-| `POST` | `/api/summarize` | Summarise text (JSON body) |
-| `POST` | `/api/summarize-batch` | Summarise multiple documents |
-| `POST` | `/api/upload` | Upload a .txt or .pdf file |
-| `POST` | `/api/upload-multiple` | Upload multiple files (batch) |
-| `POST` | `/api/export` | Download summary as .txt or .pdf |
-| `GET`  | `/api/health` | Health check |
+All endpoints return JSON. Rate limits apply per IP address.
 
-### `/api/summarize` — Request body
+### `POST /api/summarize`
+
+**Rate limit:** 15 req/min
+
+**Request:**
 
 ```json
 {
-  "text": "your document text here...",
+  "text": "Your document text...",
   "method": "combined",
   "ratio": 0.3
 }
 ```
 
-`method` options: `"frequency"`, `"tfidf"`, `"combined"`, `"abstractive"`  
-`ratio` range: `0.1` – `0.9`
+| Field | Type | Values | Default |
+|---|---|---|---|
+| `text` | string | 100–50,000 characters | required |
+| `method` | string | `frequency` / `tfidf` / `combined` / `abstractive` | `combined` |
+| `ratio` | float | 0.1–0.9 | `0.3` |
 
-### `/api/summarize` — Response
+**Response:**
 
 ```json
 {
   "success": true,
   "summary": "...",
   "summary_type": "extractive",
-  "original_word_count": 1200,
-  "summary_word_count": 240,
-  "compression_ratio": "80%",
+  "original_word_count": 420,
+  "summary_word_count": 126,
+  "compression_ratio": "70%",
   "detected_language": "en",
   "detected_language_name": "English",
   "analytics": {
-    "top_words": [{ "word": "ai", "count": 12 }],
-    "keywords": ["machine learning", "neural network"],
-    "sentence_scores": [{ "sentence": "...", "score": 0.87, "label": "high" }]
+    "top_words": [{"word": "summarization", "count": 5}],
+    "keywords": ["extractive summarization", "sentence scoring"],
+    "sentence_scores": [
+      {"sentence": "...", "score": 0.85, "rank": 1, "label": "high"}
+    ]
   }
 }
 ```
 
-### `/api/summarize-batch` — Request body
+`label` values are rank-based: top 33% = `high`, middle 33% = `medium`, bottom 33% = `low`.
+
+---
+
+### `POST /api/summarize-batch`
+
+**Rate limit:** 5 req/min
 
 ```json
 {
-  "documents": ["text of doc 1...", "text of doc 2..."],
+  "documents": ["Doc 1 text...", "Doc 2 text..."],
   "names": ["report.pdf", "email.txt"],
   "method": "combined",
   "ratio": 0.3,
-  "mode": "combined"
+  "mode": "individual"
 }
 ```
 
-`mode` options: `"combined"` (one merged summary), `"individual"` (separate summary per doc)  
-Maximum 10 documents per request.
+| Field | Values | Notes |
+|---|---|---|
+| `mode` | `combined` / `individual` | Combined merges all docs into one summary |
+| `method` | `frequency` / `tfidf` / `combined` | Abstractive not supported in batch |
+| Max documents | 10 | Per request |
+| Max combined text | 150K chars | For `combined` mode only |
+
+---
+
+### `POST /api/upload`
+
+**Rate limit:** 30 req/min
+
+Upload a single `.txt` or `.pdf` file (multipart, field name `file`). File is validated by extension and PDF magic bytes, read into memory, then deleted from disk.
+
+```json
+{"success": true, "text": "...", "char_count": 3842}
+```
+
+---
+
+### `POST /api/upload-multiple`
+
+**Rate limit:** 10 req/min
+
+Upload up to 10 files (field name `files`). Returns texts with per-file errors for partial failures.
+
+---
+
+### `POST /api/export`
+
+**Rate limit:** 30 req/min
+
+```json
+{"summary": "Summary text...", "format": "txt"}
+```
+
+`format`: `txt` or `pdf`. File is generated in memory and returned as an attachment — nothing is written to disk.
+
+---
+
+### `GET /api/health`
+
+```json
+{"status": "ok"}
+```
 
 ---
 
@@ -168,55 +263,36 @@ make test
 python -m pytest tests/ -v
 ```
 
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Web framework | Flask 3.0 |
-| NLP | NLTK 3.8, spaCy 3.8 |
-| ML | scikit-learn (TF-IDF) |
-| Language detection | langdetect |
-| Deep learning (optional) | HuggingFace Transformers, PyTorch — `facebook/bart-large-cnn` |
-| PDF read | pdfplumber |
-| PDF export | reportlab |
-| Frontend | Vanilla JS, Chart.js |
-| Font | Inter (Google Fonts) |
-| Production server | Gunicorn |
+22 tests covering analytics, preprocessor pipeline, and summarizer routes.
 
 ---
 
-## Production Deployment
+## Security
 
-```bash
-gunicorn wsgi:app --workers 4 --bind 0.0.0.0:8000
-```
+| Control | Implementation |
+|---|---|
+| File type validation | Extension check + `%PDF` magic-byte check |
+| Upload cleanup | Files deleted from disk immediately after text extraction |
+| Export | Generated in memory — no files written to disk |
+| Rate limiting | Per-IP limits on all write endpoints (Flask-Limiter) |
+| CORS | Configurable via `CORS_ORIGINS` env var (default `*`) |
+| Secret key | Must be set via env var in production — app refuses to start otherwise |
+| Debug mode | Off by default; enable only with `FLASK_DEBUG=true` |
 
 ---
 
-## Evaluation Criteria Coverage
+## Makefile Targets
 
-| Criterion | Implementation |
-|-----------|---------------|
-| NLP preprocessing (25%) | Lowercasing, stopword removal, tokenisation, sentence segmentation, language detection (16 languages) |
-| Summarisation logic (25%) | Frequency scorer, TF-IDF scorer, weighted ranker with positional bias, BART abstractive summarization |
-| Code structure (20%) | Feature-modular Flask app with blueprints, service layer, config classes, singleton model loaders |
-| Output quality (15%) | Original vs summary display, compression stats, adjustable ratio, analytics panel, language badge |
-| Error handling (10%) | Custom exceptions, client + server validation, Flask error handlers, graceful BART fallback |
-| Documentation (5%) | README + full technical explanation in `docs/PROJECT_EXPLANATION.md` (includes interview Q&A) |
-
-### Bonus Challenges Completed
-
-| Bonus | Status |
-|-------|--------|
-| Abstractive summarization (BART) | ✅ Implemented — optional install |
-| Language detection | ✅ 16 languages supported |
-| Multi-document summarization | ✅ Combined + Individual modes, up to 10 docs |
+| Target | Description |
+|---|---|
+| `make install` | Install Python dependencies |
+| `make setup` | Install deps + download NLP models |
+| `make run` | Start development server |
+| `make test` | Run test suite |
+| `make clean` | Remove `__pycache__` and `.pyc` files |
 
 ---
 
 ## Author
 
-Developer · TEYZIX CORE · Task AI-INT-1
-# AI-Powered-Document-Summarization-System
+Muhammad Maheem — TEYZIX CORE — Task AI-INT-1

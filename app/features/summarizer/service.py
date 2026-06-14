@@ -3,15 +3,13 @@ Summarisation service.
 
 Orchestrates:
   1. Preprocessing pipeline
-  2. Chosen scoring algorithm(s)
+  2. Scoring (frequency + TF-IDF, computed once for all paths)
   3. Sentence ranking and selection
   4. Analytics computation
   5. Response assembly
-
-Keeping this logic in a service layer means the Flask route stays a
-thin HTTP adapter (parse → call → respond).
 """
 
+import logging
 from app.features.preprocessor import pipeline as preprocessor
 from app.core.algorithms import frequency_scorer, tfidf_scorer, sentence_ranker
 from app.core.algorithms.abstractive_summarizer import (
@@ -22,6 +20,8 @@ from app.features.analytics import frequency, keywords, scoring
 from app.features.summarizer.schemas import SummarizeRequest, SummarizeResponse
 from app.features.summarizer.exceptions import SummarizationError
 
+logger = logging.getLogger(__name__)
+
 
 def summarize(req: SummarizeRequest) -> SummarizeResponse:
     result = preprocessor.run(req.text)
@@ -29,19 +29,20 @@ def summarize(req: SummarizeRequest) -> SummarizeResponse:
     if len(result.raw_sentences) < 2:
         raise SummarizationError("Text is too short to summarize (fewer than 2 sentences detected).")
 
-    # Analytics always run on the preprocessed tokens regardless of method
     top_words = frequency.top_word_frequencies(result.flat_tokens, top_n=15)
     extracted_keywords = keywords.extract_keywords(result.raw_sentences, result.token_lists, top_n=10)
 
+    # Compute both scorers once — used by all methods (abstractive needs them for analytics).
+    freq_scores = frequency_scorer.score_sentences(result.raw_sentences, result.token_lists)
+    tfidf_scores = tfidf_scorer.score_sentences(result.raw_sentences, result.token_lists)
+
     if req.method == "abstractive":
+        logger.info("Abstractive summarize: %d chars", len(req.text))
         try:
             summary = summarize_abstractive(req.text, ratio=req.ratio)
         except AbstractiveNotAvailable as exc:
             raise SummarizationError(str(exc))
 
-        # Sentence scores still computed extractively for the analytics panel
-        freq_scores  = frequency_scorer.score_sentences(result.raw_sentences, result.token_lists)
-        tfidf_scores = tfidf_scorer.score_sentences(result.raw_sentences, result.token_lists)
         _, combined_scores = sentence_ranker.rank_and_select(
             result.raw_sentences, freq_scores, tfidf_scores, ratio=req.ratio
         )
@@ -65,19 +66,17 @@ def summarize(req: SummarizeRequest) -> SummarizeResponse:
         )
 
     # Extractive path (frequency / tfidf / combined)
-    freq_scores  = frequency_scorer.score_sentences(result.raw_sentences, result.token_lists)
-    tfidf_scores = tfidf_scorer.score_sentences(result.raw_sentences, result.token_lists)
-
     if req.method == "frequency":
-        final_freq   = freq_scores
-        final_tfidf  = [0.0] * len(result.raw_sentences)
+        final_freq = freq_scores
+        final_tfidf = [0.0] * len(result.raw_sentences)
     elif req.method == "tfidf":
-        final_freq   = [0.0] * len(result.raw_sentences)
-        final_tfidf  = tfidf_scores
+        final_freq = [0.0] * len(result.raw_sentences)
+        final_tfidf = tfidf_scores
     else:
-        final_freq   = freq_scores
-        final_tfidf  = tfidf_scores
+        final_freq = freq_scores
+        final_tfidf = tfidf_scores
 
+    logger.info("Extractive summarize (%s): %d sentences", req.method, len(result.raw_sentences))
     summary_sentences, combined_scores = sentence_ranker.rank_and_select(
         result.raw_sentences, final_freq, final_tfidf, ratio=req.ratio
     )
