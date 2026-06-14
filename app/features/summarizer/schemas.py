@@ -8,7 +8,7 @@ from flask import current_app
 
 from app.features.summarizer.exceptions import TextTooShortError, TextTooLongError, ValidationError
 
-VALID_METHODS = ("frequency", "tfidf", "combined")
+VALID_METHODS = ("frequency", "tfidf", "combined", "abstractive")
 
 
 @dataclass
@@ -49,14 +49,20 @@ class SummarizeResponse:
     top_words: List[dict]
     keywords: List[str]
     sentence_scores: List[dict]
+    detected_language: str = "en"
+    detected_language_name: str = "English"
+    summary_type: str = "extractive"
 
     def to_dict(self) -> dict:
         return {
             "success": True,
             "summary": self.summary,
+            "summary_type": self.summary_type,
             "original_word_count": self.original_word_count,
             "summary_word_count": self.summary_word_count,
             "compression_ratio": self.compression_ratio,
+            "detected_language": self.detected_language,
+            "detected_language_name": self.detected_language_name,
             "analytics": {
                 "top_words": self.top_words,
                 "keywords": self.keywords,

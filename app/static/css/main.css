@@ -542,6 +542,24 @@ body {
   margin-bottom: 0.75rem;
 }
 
+.summary-box-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-type-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+  background-color: var(--accent-subtle);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--accent);
+}
+
 .summary-box-title {
   font-size: 0.82rem;
   font-weight: 600;
@@ -676,6 +694,153 @@ body {
 .toast.toast--visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* ─── Language stat chip ──────────────────────────────────────────────────── */
+
+.stat-chip--lang {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
+
+.stat-chip--lang .stat-value {
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Multi-doc file list ─────────────────────────────────────────────────── */
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.file-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.file-list-name {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.file-list-remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--bg-base);
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  font-family: inherit;
+}
+
+.file-list-remove:hover {
+  background-color: var(--danger);
+  color: #fff;
+}
+
+/* ─── Mode toggle ─────────────────────────────────────────────────────────── */
+
+.mode-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.mode-toggle {
+  display: flex;
+  background-color: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.mode-btn {
+  padding: 0.35rem 0.85rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mode-btn--active {
+  background-color: var(--bg-surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Doc tabs row (individual batch results) ─────────────────────────────── */
+
+.doc-tabs-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.doc-tab-btn {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-tab-btn--active {
+  background-color: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.doc-tab-btn--error {
+  border-color: var(--danger);
+  color: var(--danger);
+  opacity: 0.75;
+}
+
+.doc-tab-btn:hover:not(.doc-tab-btn--active) {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 /* ─── Scrollbar styling ───────────────────────────────────────────────────── */

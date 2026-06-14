@@ -18,6 +18,9 @@
       <button class="tab-btn" role="tab" data-tab="file" aria-selected="false">
         Upload File
       </button>
+      <button class="tab-btn" role="tab" data-tab="multidoc" aria-selected="false">
+        Multi-Doc
+      </button>
     </div>
 
     <!-- Text tab -->
@@ -50,6 +53,25 @@
       <div class="upload-status" id="uploadStatus"></div>
     </div>
 
+    <!-- Multi-Doc tab -->
+    <div class="tab-content tab-content--hidden" id="tab-multidoc">
+      <div class="upload-zone" id="multiUploadZone" tabindex="0" role="button" aria-label="Upload multiple files area">
+        <div class="upload-icon">&#128196;&#128196;</div>
+        <p class="upload-label">Drop multiple .txt or .pdf files here</p>
+        <p class="upload-hint">or click to browse · up to 10 files · 5 MB each</p>
+        <input type="file" id="multiFileInput" accept=".txt,.pdf" multiple class="upload-input" aria-label="Choose files" />
+      </div>
+      <div class="file-list" id="multiFileList"></div>
+      <div class="mode-toggle-group">
+        <span class="field-label">Summary mode</span>
+        <div class="mode-toggle" role="group" aria-label="Summary mode">
+          <button class="mode-btn mode-btn--active" data-mode="combined" type="button">Combined</button>
+          <button class="mode-btn" data-mode="individual" type="button">Individual</button>
+        </div>
+      </div>
+      <div class="upload-status" id="multiUploadStatus"></div>
+    </div>
+
     <!-- Options -->
     <div class="options-section">
       <div class="options-grid">
@@ -59,6 +81,7 @@
             <option value="combined">Combined (Recommended)</option>
             <option value="frequency">Frequency-based</option>
             <option value="tfidf">TF-IDF</option>
+            <option value="abstractive">Abstractive — BART ✦</option>
           </select>
         </div>
 
@@ -115,12 +138,22 @@
           <span class="stat-label">Reduced by</span>
           <span class="stat-value" id="statReduced">—</span>
         </div>
+        <div class="stat-chip stat-chip--lang" id="statLangChip" hidden>
+          <span class="stat-label">Language</span>
+          <span class="stat-value" id="statLang">—</span>
+        </div>
       </div>
+
+      <!-- Doc tabs for individual batch results -->
+      <div class="doc-tabs-row" id="docTabsRow" hidden></div>
 
       <!-- Summary box -->
       <div class="summary-box">
         <div class="summary-box-header">
-          <h3 class="summary-box-title">Summary</h3>
+          <div class="summary-box-title-row">
+            <h3 class="summary-box-title">Summary</h3>
+            <span class="summary-type-badge" id="summaryTypeBadge" hidden>AI Generated</span>
+          </div>
           <button class="btn-copy" id="copyBtn" type="button" title="Copy summary">&#128203; Copy</button>
         </div>
         <p class="summary-text" id="summaryText"></p>

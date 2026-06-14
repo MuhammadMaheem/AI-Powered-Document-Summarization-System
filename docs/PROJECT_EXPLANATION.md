@@ -13,15 +13,18 @@
 5. [Algorithm 1: Frequency-Based Scoring](#5-frequency-based-scoring)
 6. [Algorithm 2: TF-IDF Scoring](#6-tfidf-scoring)
 7. [Algorithm 3: Sentence Ranker with Positional Bias](#7-sentence-ranker)
-8. [Analytics Module](#8-analytics-module)
-9. [File Handling (Upload + Export)](#9-file-handling)
-10. [Flask Architecture (Blueprints + App Factory)](#10-flask-architecture)
-11. [Validation Layer](#11-validation-layer)
-12. [Frontend Architecture](#12-frontend-architecture)
-13. [Dark / Light Theme System](#13-dark-light-theme)
-14. [Why NOT LangGraph](#14-why-not-langgraph)
-15. [How to Run and Test](#15-how-to-run)
-16. [Common Interview Questions and Answers](#16-interview-prep)
+8. [Algorithm 4: Abstractive Summarization (BART)](#8-abstractive-summarization)
+9. [Language Detection](#9-language-detection)
+10. [Multi-Document Summarization](#10-multi-document-summarization)
+11. [Analytics Module](#11-analytics-module)
+12. [File Handling (Upload + Export)](#12-file-handling)
+13. [Flask Architecture (Blueprints + App Factory)](#13-flask-architecture)
+14. [Validation Layer](#14-validation-layer)
+15. [Frontend Architecture](#15-frontend-architecture)
+16. [Dark / Light Theme System](#16-dark-light-theme)
+17. [Why NOT LangGraph](#17-why-not-langgraph)
+18. [How to Run and Test](#18-how-to-run)
+19. [Common Interview Questions and Answers](#19-interview-prep)
 
 ---
 
@@ -274,7 +277,167 @@ top = sorted(ranked[:num_sentences], key=lambda x: x["index"])
 
 ---
 
-## 8. Analytics Module
+## 8. Abstractive Summarization (BART)
+
+**File:** `app/core/algorithms/abstractive_summarizer.py`
+
+### Extractive vs Abstractive — the key difference
+
+All three previous algorithms are **extractive**: they pick and return sentences that already exist in the document. The output is always verbatim text from the source.
+
+**Abstractive summarization** works differently. The model reads the entire document, understands its meaning, and then **generates brand-new sentences** that were never in the original text. The output can rephrase, combine, or condense ideas — just like a human would when summarizing in their own words.
+
+Example:
+- Input: `"The stock market fell sharply. Investors panicked. Trading volume hit record highs."`
+- Extractive output: `"The stock market fell sharply. Trading volume hit record highs."` ← copied sentences
+- Abstractive output: `"Market volatility triggered investor panic amid record trading activity."` ← new sentence
+
+### What is BART?
+
+BART stands for **Bidirectional and Auto-Regressive Transformer**. It was created by Facebook/Meta and has two components:
+
+**Encoder** (bidirectional — like BERT):
+- Reads the entire input text simultaneously in both directions
+- Builds a deep contextual understanding of every word in relation to every other word
+- Produces a compressed representation of the document's meaning
+
+**Decoder** (auto-regressive — like GPT):
+- Generates the summary one token (word-piece) at a time
+- Each new token is conditioned on the encoder's representation AND all previously generated tokens
+- Continues until an end-of-sequence token is generated or a length limit is reached
+
+The model used is `facebook/bart-large-cnn`, pre-trained on 300,000 CNN and DailyMail news article–summary pairs. This means it is already an expert at summarizing news and reports out of the box — no fine-tuning required.
+
+### Long document handling (chunking)
+
+BART has a hard input limit of **1024 tokens** (~800 words). For longer documents, we use **hierarchical summarization**:
+
+```
+Step 1: Split text into 800-word chunks
+        ["chunk 1...", "chunk 2...", "chunk 3..."]
+
+Step 2: Summarize each chunk independently
+        ["summary of chunk 1", "summary of chunk 2", "summary of chunk 3"]
+
+Step 3: Concatenate chunk summaries
+        "summary of chunk 1 summary of chunk 2 summary of chunk 3"
+
+Step 4: Run BART again on the combined chunk summaries
+        → Final summary
+```
+
+This approach preserves information from all parts of a long document.
+
+### Ratio to length mapping
+
+The user's ratio slider (0.1–0.9) is mapped to BART's `min_length` and `max_length` parameters:
+
+```python
+target_words = max(30, round(ratio * word_count))
+min_length = max(20, round(target_words * 0.6))
+max_length = target_words + 30
+```
+
+### Lazy loading and graceful fallback
+
+The BART model (~1.6 GB) is **loaded on first request only** and cached in memory for subsequent requests. If `transformers` or `torch` are not installed, the system raises `AbstractiveNotAvailable` — a specific exception caught by the service layer and returned to the client as a clear 422 error. The other three methods continue working normally.
+
+```python
+_pipeline = None  # None until first abstractive request
+
+def _get_pipeline():
+    if _pipeline is None:
+        _load_pipeline()  # downloads + loads model on first call
+    return _pipeline
+```
+
+### Why BART and not other models?
+
+| Model | Good for | Problem |
+|-------|----------|---------|
+| `facebook/bart-large-cnn` | Document summarization | ~1.6 GB |
+| `google/pegasus-cnn_dailymail` | Summarization, similar quality | Similar size |
+| `t5-small` | Many tasks, very small | Lower quality summaries |
+| GPT-4 (API) | Everything | Costs money, needs internet |
+
+BART-large-CNN is the industry standard for offline summarization — best quality-to-practicality ratio.
+
+---
+
+## 9. Language Detection
+
+**File:** `app/features/preprocessor/language_detector.py`
+
+### What it does
+
+Before any preprocessing, the pipeline samples the first 500 characters of the input text and identifies the language using the `langdetect` library. It returns:
+- An ISO 639-1 code (`"en"`, `"fr"`, `"de"`, `"es"`, etc.)
+- The NLTK language name (`"english"`, `"french"`, etc.) used to select the correct stopword list
+- A human-readable label (`"English"`, `"French"`) shown in the UI
+
+### Why sample only 500 characters?
+
+Language detection is statistical — it needs enough characters to make a reliable prediction but doesn't need the entire document. 500 characters (~3–4 sentences) is sufficient for high accuracy while keeping the detection overhead under 5ms.
+
+### Multilingual stopwords
+
+NLTK ships with stopword lists for 16+ languages. Once the language is detected, `text_cleaner.remove_stopwords()` uses the appropriate list:
+
+```python
+def remove_stopwords(tokens: list, language: str = "english") -> list:
+    stop = _get_stopwords(language)   # cached per language
+    return [t for t in tokens if t not in stop and len(t) > 1]
+```
+
+This means a French document removes French stopwords (`le`, `la`, `de`, `et`) rather than incorrectly using English ones. The stopword lists are cached after first load so repeated calls cost nothing.
+
+### Fallback
+
+If detection fails (very short text, mixed languages, encoding issues), the function silently returns `("en", "english", "English")`. It never raises an exception — the rest of the pipeline is never affected.
+
+---
+
+## 10. Multi-Document Summarization
+
+**Files:** `app/features/summarizer/batch_service.py`, `app/features/file_handler/routes.py`
+
+### Two modes
+
+**Combined mode:**
+All document texts are concatenated with double newlines (`\n\n`) into a single string, then passed through the normal single-document summarization pipeline. The result is one summary that covers all documents.
+
+Use case: summarize a collection of related reports into one executive brief.
+
+**Individual mode:**
+Each document is summarized independently in a loop. Results are returned as an array — one summary object per document. The UI renders per-document tabs so users can switch between summaries.
+
+Use case: process 5 research papers and compare their individual summaries.
+
+### Batch validation
+
+`BatchSummarizeRequest.from_dict()` validates before any processing starts:
+- `documents` must be a non-empty list (max 10)
+- Each document: minimum 100 chars, maximum 50,000 chars
+- Method, ratio, mode validated same rules as single-document
+
+If document 3 fails validation, the error is returned immediately and none of the documents are processed — fail fast.
+
+### New API endpoints
+
+```
+POST /api/upload-multiple
+  Input:  multipart/form-data, field "files" (multiple)
+  Output: { texts: [...], names: [...], char_counts: [...], errors: [...] }
+
+POST /api/summarize-batch
+  Input:  { documents, names, method, ratio, mode }
+  Output (combined):    { mode: "combined", document_count, summary, analytics, ... }
+  Output (individual):  { mode: "individual", results: [{ doc_name, summary, ... }, ...] }
+```
+
+---
+
+## 11. Analytics Module
 
 ### Word Frequency (`app/features/analytics/frequency.py`)
 ```python
@@ -308,7 +471,7 @@ Takes the `combined_scores` list from the ranker and adds a human-readable `labe
 
 ---
 
-## 9. File Handling
+## 12. File Handling
 
 ### Upload (`app/features/file_handler/reader.py`)
 
@@ -350,7 +513,7 @@ After the file is sent to the user with `Flask.send_file()`, the file could be c
 
 ---
 
-## 10. Flask Architecture
+## 13. Flask Architecture
 
 ### App Factory (`app/__init__.py`)
 
@@ -410,7 +573,7 @@ All business logic lives in `service.py`. The route has no knowledge of NLP algo
 
 ---
 
-## 11. Validation Layer
+## 14. Validation Layer
 
 Validation happens at two levels:
 
@@ -436,7 +599,7 @@ Server-side validation is essential because API endpoints can be called directly
 
 ---
 
-## 12. Frontend Architecture
+## 15. Frontend Architecture
 
 The frontend is **server-rendered HTML + Vanilla JavaScript**. No React, no Vue, no build tools.
 
@@ -474,7 +637,7 @@ This creates a private scope and prevents variable pollution of the global names
 
 ---
 
-## 13. Dark / Light Theme System
+## 16. Dark / Light Theme System
 
 **How CSS custom properties work:**
 
@@ -512,7 +675,7 @@ If no stored preference exists, the system respects the user's OS dark/light pre
 
 ---
 
-## 14. Why NOT LangGraph
+## 17. Why NOT LangGraph
 
 LangGraph is a library for building **multi-agent workflows** with complex state machines. It is designed for scenarios like:
 - An AI agent that decides to call different tools (web search, database query, calculator) in a dynamic sequence
@@ -534,7 +697,7 @@ If the task required: "Given a document, decide whether to search the web for ad
 
 ---
 
-## 15. How to Run
+## 18. How to Run
 
 ```bash
 # Install everything
@@ -566,19 +729,31 @@ Three ready-to-use samples are in `samples/`:
 
 ---
 
-## 16. Interview Prep
+## 19. Interview Prep
 
 **Q: What is extractive summarisation?**
-A: Extractive summarisation selects and returns the most important sentences from the original text without rewriting or paraphrasing. It is contrasted with abstractive summarisation, which generates new sentences (like humans do). Extractive is simpler, faster, and guaranteed to produce grammatically correct output since every sentence is taken verbatim.
+A: Extractive summarisation selects and returns the most important sentences from the original text without rewriting or paraphrasing. It is contrasted with generative (neural) summarisation which generates new sentences. Extractive is simpler, faster, and guaranteed to produce grammatically correct output since every sentence is taken verbatim.
+
+**Q: What is the difference between extractive and generative summarisation?**
+A: Extractive methods (frequency, TF-IDF, combined) score existing sentences and return the highest-scoring ones — output is always copied text from the source. Generative methods (BART) use an encoder-decoder neural network: the encoder reads the full document and produces a vector representation of its meaning, then the decoder generates new tokens one at a time to form a fluent, paraphrased summary. Generative output is higher quality but requires a large model (~1.6 GB) and is much slower (5–30 seconds vs under 1 second).
+
+**Q: What is BART and how does it work?**
+A: BART (Bidirectional and Auto-Regressive Transformer) is a sequence-to-sequence neural model from Meta. The encoder reads the entire input simultaneously (bidirectional, like BERT) to build a rich contextual representation. The decoder then generates the summary token-by-token (auto-regressive, like GPT), conditioning each new word on both the encoder output and all previously generated words. The model used is `facebook/bart-large-cnn`, pre-trained on 300,000 news article-summary pairs from CNN and DailyMail.
+
+**Q: How do you handle documents longer than BART's 1024-token limit?**
+A: We use hierarchical summarisation. The document is split into 800-word chunks. Each chunk is summarised independently by BART. The resulting chunk summaries are concatenated and passed through BART a second time to produce a single coherent final summary. This preserves information from all parts of the document.
 
 **Q: What is TF-IDF and why is it useful?**
 A: TF-IDF (Term Frequency–Inverse Document Frequency) scores words by how frequently they appear in a specific sentence (TF) weighted by how rarely they appear across all sentences (IDF). Words that appear in every sentence score near zero — they are uninformative. Words unique to specific sentences score high — they are distinctive and important. This makes TF-IDF better than raw frequency for identifying the most informative sentences.
 
-**Q: What is stopword removal and why do we do it?**
-A: Stopwords are high-frequency grammatical words ("the", "is", "at") that carry no semantic meaning. Removing them reduces noise in the token lists and ensures that scoring algorithms focus on content-bearing words (nouns, verbs, adjectives).
-
 **Q: What is the positional bias in the sentence ranker?**
 A: Real documents tend to state key information at the beginning (abstract, introduction) and end (conclusion). The ranker adds a 0.1 boost to sentences at positions 0, 1, and the last position to reflect this real-world pattern, improving summary quality for structured documents.
+
+**Q: How does language detection work?**
+A: The `langdetect` library samples the first 500 characters of the input and uses a Naive Bayes classifier trained on text profiles for 55 languages. It returns an ISO 639-1 code (e.g., `"fr"` for French). We map this to an NLTK language name and use it to select the appropriate common-word list for that language, so French documents have French common words removed rather than English ones.
+
+**Q: How does multi-document summarisation work?**
+A: In combined mode, all document texts are concatenated and passed through the standard single-document pipeline — the result is one summary covering all documents. In individual mode, each document is summarised independently in a loop, and results are returned as an array. The UI shows per-document tabs for switching between individual summaries.
 
 **Q: What is the Flask app factory pattern?**
 A: Instead of creating the Flask app at the module level (a global variable), we wrap app creation in a function `create_app()`. This allows creating different app instances with different configurations — useful for testing (test config), development (debug mode on), and production (debug off, strict settings).
@@ -588,3 +763,6 @@ A: CSS custom properties (variables) are defined under `[data-theme="dark"]` and
 
 **Q: How is the file upload handled securely?**
 A: Files are validated for extension (.txt/.pdf only) and size (≤ 5MB) before saving. `werkzeug.utils.secure_filename` sanitises the filename to prevent path traversal attacks. Files are saved to a temporary directory, read, and then immediately deleted — no user data is stored on disk.
+
+**Q: Why is BART optional and not always on?**
+A: The model file is 1.6 GB and requires approximately 4 GB of RAM to run. It takes 5–30 seconds per document on a CPU. For a demo or presentation this would make the app feel broken. The three extractive methods run in under 1 second with no large downloads. BART is included as a bonus feature for users who have the hardware and patience for higher-quality output.
