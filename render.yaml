@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: ai-summerizer
+    runtime: python
+    buildCommand: >
+      pip install --upgrade pip &&
+      pip install torch --index-url https://download.pytorch.org/whl/cpu &&
+      pip install -r requirements.txt &&
+      python -m spacy download en_core_web_sm &&
+      python -m nltk.downloader punkt punkt_tab stopwords
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 wsgi:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.0

@@ -12,4 +12,4 @@ gunicorn==22.0.0
 pytest>=8.0.0
 langdetect==1.0.9
 transformers>=4.40.0
-torch>=2.0.0
+# torch installed separately via render.yaml (CPU-only build)
