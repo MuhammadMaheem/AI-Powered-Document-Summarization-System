@@ -37,6 +37,13 @@ def summarize(req: SummarizeRequest) -> SummarizeResponse:
     tfidf_scores = tfidf_scorer.score_sentences(result.raw_sentences, result.token_lists)
 
     if req.method == "abstractive":
+        import os
+        if os.getenv("FLASK_ENV") == "production":
+            raise SummarizationError(
+                "Abstractive (BART) summarization is not available on the hosted version — "
+                "it requires 2GB+ RAM. To use this feature, run the app locally: "
+                "https://github.com/MuhammadMaheem/AI-Powered-Document-Summarization-System"
+            )
         logger.info("Abstractive summarize: %d chars", len(req.text))
         try:
             summary = summarize_abstractive(req.text, ratio=req.ratio)
