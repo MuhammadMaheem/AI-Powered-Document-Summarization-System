@@ -1,0 +1,75 @@
+/* ─── Design token definitions ───────────────────────────────────────────── */
+
+:root,
+[data-theme="dark"] {
+  /* Surfaces */
+  --bg-base:        #0f1117;
+  --bg-surface:     #1a1d27;
+  --bg-elevated:    #232737;
+  --bg-hover:       #2a2f42;
+
+  /* Borders */
+  --border-subtle:  #2d3148;
+  --border-default: #3d4263;
+
+  /* Text */
+  --text-primary:   #e2e4f0;
+  --text-secondary: #9ba3c4;
+  --text-muted:     #5c6385;
+  --text-inverse:   #0f1117;
+
+  /* Accent — indigo-violet */
+  --accent:         #7c6aff;
+  --accent-hover:   #9580ff;
+  --accent-subtle:  rgba(124, 106, 255, 0.12);
+  --accent-text:    #ffffff;
+
+  /* Semantic */
+  --success:        #22c55e;
+  --success-subtle: rgba(34, 197, 94, 0.1);
+  --warning:        #f59e0b;
+  --warning-subtle: rgba(245, 158, 11, 0.1);
+  --danger:         #ef4444;
+  --danger-subtle:  rgba(239, 68, 68, 0.1);
+
+  /* Score labels */
+  --score-high:     var(--success);
+  --score-med:      var(--warning);
+  --score-low:      var(--text-muted);
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg:  0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] {
+  --bg-base:        #f4f5fa;
+  --bg-surface:     #ffffff;
+  --bg-elevated:    #f0f1f8;
+  --bg-hover:       #e8eaf4;
+
+  --border-subtle:  #e0e2ef;
+  --border-default: #c8cce0;
+
+  --text-primary:   #1a1d2e;
+  --text-secondary: #4a4f6a;
+  --text-muted:     #9095b0;
+  --text-inverse:   #ffffff;
+
+  --accent:         #5b4fe8;
+  --accent-hover:   #4a3fd4;
+  --accent-subtle:  rgba(91, 79, 232, 0.08);
+  --accent-text:    #ffffff;
+
+  --success:        #16a34a;
+  --success-subtle: rgba(22, 163, 74, 0.08);
+  --warning:        #d97706;
+  --warning-subtle: rgba(217, 119, 6, 0.08);
+  --danger:         #dc2626;
+  --danger-subtle:  rgba(220, 38, 38, 0.08);
+
+  --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-lg:  0 8px 32px rgba(0, 0, 0, 0.14);
+}
